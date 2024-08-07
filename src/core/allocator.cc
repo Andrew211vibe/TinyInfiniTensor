@@ -1,5 +1,7 @@
 #include "core/allocator.h"
 #include <utility>
+#include <iostream>
+#include <limits>
 
 namespace infini
 {
@@ -13,6 +15,7 @@ namespace infini
         // the longest data type currently supported by the DataType field of
         // the tensor
         alignment = sizeof(uint64_t);
+        free_blocks[0] = SIZE_MAX;
     }
 
     Allocator::~Allocator()
@@ -32,8 +35,29 @@ namespace infini
         // =================================== 作业 ===================================
         // TODO: 设计一个算法来分配内存，返回起始地址偏移量
         // =================================== 作业 ===================================
+        size_t res = 0;
+        for (auto block : free_blocks) 
+        {
+            std::cout << "start: " << block.first << " size: " << block.second << " target: " << size << std::endl;
+            if (block.second >= size_t(size)) 
+            {
+                res = block.first;
+                if (block.second > size) 
+                {
+                    size_t tmp = block.second;
+                    free_blocks.erase(res);
+                    free_blocks[res + size] = tmp - size;
+                } 
+                else 
+                {
+                    free_blocks.erase(res);
+                }
+                break;
+            }
+        }
 
-        return 0;
+        merge_free_blocks();
+        return res;
     }
 
     void Allocator::free(size_t addr, size_t size)
@@ -44,6 +68,8 @@ namespace infini
         // =================================== 作业 ===================================
         // TODO: 设计一个算法来回收内存
         // =================================== 作业 ===================================
+        free_blocks[addr] = size;
+        merge_free_blocks();
     }
 
     void *Allocator::getPtr()
@@ -65,5 +91,24 @@ namespace infini
     {
         std::cout << "Used memory: " << this->used
                   << ", peak memory: " << this->peak << std::endl;
+    }
+
+    void Allocator::merge_free_blocks()
+    {
+        std::map<int64_t, size_t> res;
+        int64_t st = -2e9, ed = -2e9;
+        for (auto block : free_blocks)
+            if (ed < block.first)
+            {
+                if (ed != -2e9) res[st] = ed - st;
+                st = block.first, ed = block.first + block.second;
+            }
+            else
+                ed = std::max(size_t(ed), block.first + block.second);
+
+        if (st != -2e9)
+            res[st] = ed - st;
+        // 将结果区间赋给原区间 -> 得到合并后区间个数segs.size()
+        free_blocks = res;
     }
 }
