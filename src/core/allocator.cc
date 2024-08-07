@@ -38,7 +38,6 @@ namespace infini
         size_t res = 0;
         for (auto block : free_blocks) 
         {
-            std::cout << "start: " << block.first << " size: " << block.second << " target: " << size << std::endl;
             if (block.second >= size_t(size)) 
             {
                 res = block.first;
@@ -52,6 +51,8 @@ namespace infini
                 {
                     free_blocks.erase(res);
                 }
+                used += size;
+                peak = free_blocks.rbegin()->first;
                 break;
             }
         }
@@ -69,6 +70,8 @@ namespace infini
         // TODO: 设计一个算法来回收内存
         // =================================== 作业 ===================================
         free_blocks[addr] = size;
+        used -= size;
+        peak = free_blocks.rbegin()->first;
         merge_free_blocks();
     }
 
